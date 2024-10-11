@@ -1,3 +1,5 @@
+import tkinter as tk
+
 class GameManager:
     """Manages the game state, player turns, and game logic for SOS."""
 
@@ -34,10 +36,6 @@ class GameManager:
     def get_current_player(self):
         """Returns the current player."""
         return self.current_player
-
-    def check_board_filled(self):
-        """Checks if the board is completely filled."""
-        return all(self.board[row][col] != ' ' for row in range(self.board_size) for col in range(self.board_size))
 
     def get_board_value(self, row, col):
         """Returns the value at a specific position on the board."""
