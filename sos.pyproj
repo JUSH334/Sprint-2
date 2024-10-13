@@ -11,6 +11,9 @@
     <OutputPath>.</OutputPath>
     <Name>sos</Name>
     <RootNamespace>sos</RootNamespace>
+    <TestFramework>unittest</TestFramework>
+    <UnitTestPattern>test_*.py</UnitTestPattern>
+    <UnitTestRootDirectory>.</UnitTestRootDirectory>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>

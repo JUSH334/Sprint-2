@@ -1,5 +1,3 @@
-import tkinter as tk
-
 class GameManager:
     """Manages the game state, player turns, and game logic for SOS."""
 
@@ -28,10 +26,7 @@ class GameManager:
 
     def switch_turn(self):
         """Switches the turn between players."""
-        if self.current_player == "Blue":
-            self.current_player = "Red"
-        else:
-            self.current_player = "Blue"
+        self.current_player = "Red" if self.current_player == "Blue" else "Blue"
 
     def get_current_player(self):
         """Returns the current player."""
@@ -42,6 +37,14 @@ class GameManager:
         if 0 <= row < self.board_size and 0 <= col < self.board_size:
             return self.board[row][col]
         return None
+
+    def is_board_filled(self):
+        """Checks if the entire board is filled."""
+        for row in self.board:
+            for cell in row:
+                if cell == ' ':  # Found an empty cell
+                    return False
+        return True
 
     def end_game(self):
         """Ends the current game by deactivating further moves."""
