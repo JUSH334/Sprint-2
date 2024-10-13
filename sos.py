@@ -1,7 +1,8 @@
 import tkinter as tk
-from game_manager import GameManager 
-from PlayerControls import PlayerControls  
-from GameBoard import GameBoard
+from tkinter import ttk
+from game_manager import GameManager
+from player_controls import PlayerControls
+from game_board import GameBoard
 
 class SOSGameGUI:
     """Handles the user interface for the SOS game."""
@@ -24,7 +25,7 @@ class SOSGameGUI:
     def create_ui(self):
         """Sets up the main layout for the game."""
         self.main_frame = tk.Frame(self.root)
-        self.main_frame.grid(row=0, column=0, padx=20, pady=20)  # Added padding
+        self.main_frame.grid(row=0, column=0, padx=20, pady=20)
 
         # Top Frame for mode and size selection
         self.top_frame = tk.Frame(self.main_frame)
@@ -36,23 +37,45 @@ class SOSGameGUI:
         # Player control frames
         self.blue_frame = tk.Frame(self.main_frame)
         self.blue_controls = PlayerControls(self.blue_frame, "Blue")
-        self.blue_frame.grid(row=1, column=0, padx=20, pady=10)
+        self.blue_frame.grid(row=1, column=0, padx=20, pady=10, sticky="n")
 
         self.red_frame = tk.Frame(self.main_frame)
         self.red_controls = PlayerControls(self.red_frame, "Red")
-        self.red_frame.grid(row=1, column=2, padx=20, pady=10)
+        self.red_frame.grid(row=1, column=2, padx=20, pady=10, sticky="n")
 
-        # Board Frame (Game board) - Initially hidden
-        self.board_frame = tk.Frame(self.main_frame)
-        self.board_frame.grid(row=1, column=1, padx=20, pady=10)
-        self.board_frame.grid_remove()  # Hide the board frame initially
-        self.board = GameBoard(self.board_frame, self.board_size, self.on_board_click)
+        # Create the Scrollable Board Frame
+        self.create_scrollable_board_frame()
 
-        # Bottom Frame for start/end game and close buttons
+        # Bottom Frame for start/end game buttons
         self.bottom_frame = tk.Frame(self.main_frame)
         self.bottom_frame.grid(row=2, column=0, columnspan=3, pady=20)
 
         self.setup_bottom_controls(self.bottom_frame)
+
+    def create_scrollable_board_frame(self):
+        """Create a scrollable frame for the game board."""
+        # Create a canvas to hold the board
+        self.canvas = tk.Canvas(self.main_frame)
+        self.canvas.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
+
+        # Add scrollbars to the canvas
+        self.scrollbar_x = ttk.Scrollbar(self.main_frame, orient="horizontal", command=self.canvas.xview)
+        self.scrollbar_x.grid(row=3, column=1, sticky="ew")
+
+        self.scrollbar_y = ttk.Scrollbar(self.main_frame, orient="vertical", command=self.canvas.yview)
+        self.scrollbar_y.grid(row=1, column=3, sticky="ns")
+
+        # Configure the canvas to use the scrollbars
+        self.canvas.configure(xscrollcommand=self.scrollbar_x.set, yscrollcommand=self.scrollbar_y.set)
+
+        # Create a frame inside the canvas to hold the board
+        self.board_frame = tk.Frame(self.canvas)
+
+        # Add the frame to the canvas using a window
+        self.canvas.create_window((0, 0), window=self.board_frame, anchor="nw")
+
+        # Update the scroll region to fit the frame
+        self.board_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
 
     def setup_game_controls(self, parent):
         """Sets up game mode and board size selection."""
@@ -96,9 +119,6 @@ class SOSGameGUI:
         self.turn_label.grid(row=1, column=0)
         self.turn_label.grid_remove()
 
-        self.close_button = tk.Button(parent, text="Close Application", command=self.close_application)
-        self.close_button.grid(row=0, column=1, padx=10, pady=5)
-
     def validate_board_size(self, new_value):
         """Validates the board size input in the Spinbox to ensure it is between 3 and 20."""
         if new_value.isdigit():
@@ -121,14 +141,38 @@ class SOSGameGUI:
         self.game_mode = self.radio_var.get().split()[0]  # "Simple" or "General"
         self.board_size = self.board_size_var.get()
 
+        # Dynamically adjust the window size based on the board size
+        self.adjust_window_size(self.board_size)
+
         # Reset the game with the selected board size and game mode
         self.game_manager.reset_game(self.board_size, self.game_mode)
 
-        # Show the board and prepare for play
-        self.board.board_size = self.board_size  # Update board size in GameBoard instance
-        self.board_frame.grid()  # Show the board frame when the game starts
-        self.board.create_board()  # Recreate the board with the new size
-        self.turn_label.grid()  # Show turn label
+        # Initialize the GameBoard instance
+        self.board = GameBoard(self.board_frame, self.board_size, self.on_board_click)
+
+        # Recreate the board with the new size
+        self.board.create_board()
+
+        # Show the turn label
+        self.turn_label.grid()
+
+    def adjust_window_size(self, board_size):
+        """Adjusts the window size based on the board size."""
+        # Define size per cell (button) in pixels
+        cell_size = 50
+
+        # Calculate desired window size
+        board_pixel_size = board_size * cell_size
+
+        # Set a threshold window size for scrollbars
+        max_window_size = 600
+
+        # If the board size exceeds the threshold, enable scrollbars and set window size to max
+        if board_pixel_size > max_window_size:
+            self.canvas.grid()
+        else:
+            # Resize window to fit the board perfectly without scrollbars
+            self.root.geometry(f"{board_pixel_size + 200}x{board_pixel_size + 200}")  # +200 for padding and controls
 
     def on_board_click(self, row, col):
         """Handles a click on the board."""
@@ -156,13 +200,15 @@ class SOSGameGUI:
         # Disable all buttons on the board
         self.board.disable_buttons()
 
+        # Reset player choices (both players default to "S")
+        self.blue_controls.choice.set("S")
+        self.red_controls.choice.set("S")
+
+        # Reset the turn label to indicate Blue player starts first
+        self.turn_label.config(text="Current turn: Blue")
+
         # Hide the turn label and the board frame when the game ends
         self.turn_label.grid_remove()
-        self.board_frame.grid_remove()
-
-    def close_application(self):
-        """Closes the application."""
-        self.root.destroy()
 
 
 def main():
