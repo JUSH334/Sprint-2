@@ -26,12 +26,13 @@ class GameBoard:
                 row_buttons.append(button)
             self.board_buttons.append(row_buttons)
 
-    def update_button(self, row, col, text):
-        """Updates a button at a specific position."""
-        self.board_buttons[row][col].config(text=text)
+    def update_button(self, row, col, text, color="black"):
+        """Updates a button at a specific position with the player's color."""
+        self.board_buttons[row][col].config(text=text, fg="black")
 
     def disable_buttons(self):
         """Disables all buttons after the game ends."""
         for row in self.board_buttons:
             for button in row:
                 button.config(state="disabled")
+               

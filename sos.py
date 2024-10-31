@@ -137,20 +137,21 @@ class SOSGameGUI:
 
     def start_game(self):
         """Initializes the game board and sets up for play."""
-        self.is_game_active = True  # Game is active when started
+        self.is_game_active = True
         self.game_mode = self.radio_var.get().split()[0]  # "Simple" or "General"
         self.board_size = self.board_size_var.get()
 
-        # Dynamically adjust the window size based on the board size
-        self.adjust_window_size(self.board_size)
+        # Clear any existing result label
+        if hasattr(self, 'result_label') and self.result_label:
+            self.result_label.destroy()
+            self.result_label = None
 
-        # Reset the game with the selected board size and game mode
+        # Adjust the window size based on the board size and reset the game with the selected mode
+        self.adjust_window_size(self.board_size)
         self.game_manager.reset_game(self.board_size, self.game_mode)
 
-        # Initialize the GameBoard instance
+        # Initialize the GameBoard instance and create the board
         self.board = GameBoard(self.board_frame, self.board_size, self.on_board_click)
-
-        # Recreate the board with the new size
         self.board.create_board()
 
         # Show the turn label
@@ -174,24 +175,6 @@ class SOSGameGUI:
             # Resize window to fit the board perfectly without scrollbars
             self.root.geometry(f"{board_pixel_size + 200}x{board_pixel_size + 200}")  # +200 for padding and controls
 
-    def on_board_click(self, row, col):
-        """Handles a click on the board."""
-        if not self.game_manager.is_game_active:
-            return  # Ignore clicks if the game is not active
-
-        # Get the current player's choice of "S" or "O"
-        current_player = self.game_manager.get_current_player()
-        character_choice = self.blue_controls.choice.get() if current_player == "Blue" else self.red_controls.choice.get()
-
-        # Make the move using the chosen character
-        if self.game_manager.make_move(row, col, character_choice):
-            self.board.update_button(row, col, character_choice)
-
-            # Switch turns after a valid move
-            self.game_manager.switch_turn()
-            next_turn = self.game_manager.get_current_player()
-            self.turn_label.config(text=f"Current turn: {next_turn}")
-
     def end_game(self):
         """Ends the game, disables all buttons, and clears the board."""
         self.is_game_active = False
@@ -210,7 +193,43 @@ class SOSGameGUI:
         # Hide the turn label and the board frame when the game ends
         self.turn_label.grid_remove()
 
+    def on_board_click(self, row, col):
+        """Handles a click on the board."""
+        if not self.game_manager.is_game_active:
+            return  # Ignore clicks if the game is not active
 
+        current_player = self.game_manager.get_current_player()
+        character_choice = self.blue_controls.choice.get() if current_player == "Blue" else self.red_controls.choice.get()
+
+        # Make the move and check the result
+        result = self.game_manager.make_move(row, col, character_choice)
+        self.board.update_button(row, col, character_choice)
+
+        # Handle the result based on the game mode
+        if result == "Blue" or result == "Red":
+            if self.game_mode == "Simple":
+                self.show_game_result(f"{result} player wins!")
+            else:  # General Game mode final result with scores
+                self.show_game_result(f"{result} player wins with score: Blue {self.game_manager.blue_score} - Red {self.game_manager.red_score}")
+        elif result == "Draw":
+            self.show_game_result("The game is a draw!")
+        elif result:
+            # Continue to the next turn if game is still ongoing
+            self.game_manager.switch_turn()
+            next_turn = self.game_manager.get_current_player()
+            self.turn_label.config(text=f"Current turn: {next_turn}")
+
+    def show_game_result(self, message):
+        """Displays the game result and disables the board."""
+        # Check if a result label already exists, and if so, remove it
+        if hasattr(self, 'result_label') and self.result_label:
+            self.result_label.destroy()
+
+        # Create a new result label and store it in an instance variable
+        self.result_label = tk.Label(self.main_frame, text=message, font=("Arial", 14))
+        self.result_label.grid(row=4, column=1, pady=10)
+
+ 
 def main():
     """Main function to run the Tkinter application."""
     root = tk.Tk()
