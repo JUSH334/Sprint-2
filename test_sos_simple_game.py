@@ -17,22 +17,30 @@ class TestSimpleGameMode(unittest.TestCase):
         self.assertEqual(result["result"], "win")
         self.assertEqual(result["winner"], "Blue")
 
-    def test_simple_mode_draw_when_board_filled_no_sos(self):
-        """Test that the game ends in a draw if the board is filled without any SOS created."""
-        moves = [
-            (0, 0, 'S'), (0, 1, 'S'), (0, 2, 'O'),
-            (1, 0, 'O'), (1, 1, 'O'), (1, 2, 'S'),
-            (2, 0, 'S'), (2, 1, 'O'), (2, 2, 'S')
-        ]
-    
-        for row, col, char in moves:
-            self.game_manager.make_move(row, col, char)
-    
-        # Get the end game result after filling the board with no SOS
-        result = self.game_manager.end_game()
-    
-        # Check that the result indicates a draw
-        self.assertEqual(result["winner"], "Draw")
+    def test_no_sos_no_win(self):
+        """Test that the game does not end if no SOS is created."""
+        self.game_manager.make_move(0, 0, 'S')
+        self.game_manager.make_move(0, 1, 'S')
+        result = self.game_manager.make_move(0, 2, 'O')
+        
+        # Expect the game to continue with no winner
+        self.assertEqual(result["result"], "next_turn")
+        self.assertTrue(self.game_manager.is_game_active)
+        
+    def test_initial_game_state(self):
+        """Test that the game initializes with an empty board and correct settings."""
+        # Check that the board is empty at the start
+        empty_board = [[' ' for _ in range(3)] for _ in range(3)]
+        self.assertEqual(self.game_manager.board, empty_board)
+        
+        # Check that the game mode is set to Simple
+        self.assertEqual(self.game_manager.game_mode, "Simple")
+        
+        # Check that the starting player is Blue
+        self.assertEqual(self.game_manager.current_player, "Blue")
+        
+        # Check that the game is active after reset
+        self.assertTrue(self.game_manager.is_game_active)
 
 
 

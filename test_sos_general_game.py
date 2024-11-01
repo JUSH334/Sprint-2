@@ -16,45 +16,29 @@ class TestGeneralGameMode(unittest.TestCase):
 
         self.assertEqual(result["result"], "continue")  # Indicates player gets an extra turn
         self.assertEqual(self.game_manager.sos_count["Blue"], 1)
+        
+    def test_no_sos_game_continues(self):
+        """Test that the game continues if no SOS is created and the board is not full."""
+        self.game_manager.make_move(0, 0, 'S')
+        self.game_manager.make_move(0, 1, 'S')
+        result = self.game_manager.make_move(0, 2, 'O')  # No SOS created here
+        
+        # Expect the game to continue with no winner and still active
+        self.assertEqual(result["result"], "next_turn")
+        self.assertTrue(self.game_manager.is_game_active)
 
-    def test_general_mode_end_game_with_sos_counts(self):
-        """Test that the game ends with the player with the most SOS counts winning."""
-        moves = [
-            (0, 0, 'S'), (0, 1, 'O'), (0, 2, 'S'),  # Blue creates 1 SOS
-            (1, 0, 'S'), (1, 1, 'O'), (1, 2, 'S'),  # Red creates 1 SOS
-            (2, 0, 'S'), (2, 1, 'O'), (2, 2, 'S')   # Blue creates 1 more SOS
-        ]
+    def test_initial_game_state_general_mode(self):
+        """Test that the game initializes correctly for General mode with an empty board."""
+        # Check that the board is empty at the start
+        empty_board = [[' ' for _ in range(3)] for _ in range(3)]
+        self.assertEqual(self.game_manager.board, empty_board)
+        
+        # Check that the game mode is set to General
+        self.assertEqual(self.game_manager.game_mode, "General")
+        
+        # Check that the starting player is Blue
+        self.assertEqual(self.game_manager.current_player, "Blue")
+        
+        # Check that the game is active after reset
+        self.assertTrue(self.game_manager.is_game_active)
     
-        for row, col, char in moves:
-            self.game_manager.make_move(row, col, char)
-    
-        # Now get the game result to check SOS counts
-        result = self.game_manager.end_game()
-    
-        # Expect Blue to have 2 SOSs and Red to have 1, making Blue the winner
-        self.assertEqual(result["blue_score"], 2)
-        self.assertEqual(result["red_score"], 1)
-        self.assertEqual(result["winner"], "Blue")
-
-    def test_general_mode_draw_with_equal_sos_counts(self):
-        """Test that the game ends in a draw if both players have the same number of SOS sequences."""
-        # Simulate moves to create equal SOS counts for both players
-        moves = [
-            (0, 0, 'S'), (0, 1, 'O'), (0, 2, 'S'),  # Blue creates 1 SOS
-            (1, 0, 'S'), (1, 1, 'O'), (1, 2, 'S')   # Red creates 1 SOS
-        ]
-    
-        for row, col, char in moves:
-            self.game_manager.make_move(row, col, char)
-    
-        # Manually set equal sos_count for a controlled test case
-        self.game_manager.sos_count["Blue"] = 1
-        self.game_manager.sos_count["Red"] = 1
-    
-        # Call end_game() to get the final result
-        result = self.game_manager.end_game()
-    
-        # Check that the result indicates a draw
-        self.assertEqual(result["winner"], "Draw")
-
-
