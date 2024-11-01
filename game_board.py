@@ -32,6 +32,13 @@ class GameBoard:
 
     def disable_buttons(self):
         """Disables all buttons after the game ends."""
+        if not self.board_buttons:
+            return  # Exit if board_buttons is empty or not initialized
+
         for row in self.board_buttons:
             for button in row:
-                button.config(state="disabled")
+                try:
+                    button.config(state="disabled")
+                except tk.TclError:
+                    # Button no longer exists, skip disabling
+                    continue
