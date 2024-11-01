@@ -51,30 +51,33 @@ class SOSGameGUI:
         self.bottom_frame.grid(row=2, column=0, columnspan=3, pady=20)
 
         self.setup_bottom_controls(self.bottom_frame)
+        
+        # Labels for SOS counts in General mode
+        blue_count = self.game_manager.sos_count["Blue"]
+        red_count = self.game_manager.sos_count["Red"]
+            
+        self.blue_sos_label = tk.Label(self.main_frame, text=f"Blue SOS Count:{blue_count}")
+        self.blue_sos_label.grid(row=3, column=0, padx=5, pady=5)
+
+        self.red_sos_label = tk.Label(self.main_frame, text=f"Red SOS Count: {red_count}")
+        self.red_sos_label.grid(row=3, column=2, padx=5, pady=5)
 
     def create_scrollable_board_frame(self):
         """Create a scrollable frame for the game board."""
-        # Create a canvas to hold the board
         self.canvas = tk.Canvas(self.main_frame)
         self.canvas.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
 
-        # Add scrollbars to the canvas
         self.scrollbar_x = ttk.Scrollbar(self.main_frame, orient="horizontal", command=self.canvas.xview)
         self.scrollbar_x.grid(row=3, column=1, sticky="ew")
 
         self.scrollbar_y = ttk.Scrollbar(self.main_frame, orient="vertical", command=self.canvas.yview)
         self.scrollbar_y.grid(row=1, column=3, sticky="ns")
 
-        # Configure the canvas to use the scrollbars
         self.canvas.configure(xscrollcommand=self.scrollbar_x.set, yscrollcommand=self.scrollbar_y.set)
 
-        # Create a frame inside the canvas to hold the board
         self.board_frame = tk.Frame(self.canvas)
-
-        # Add the frame to the canvas using a window
         self.canvas.create_window((0, 0), window=self.board_frame, anchor="nw")
 
-        # Update the scroll region to fit the frame
         self.board_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
 
     def setup_game_controls(self, parent):
@@ -82,30 +85,19 @@ class SOSGameGUI:
         label = tk.Label(parent, text="SOS")
         label.grid(row=0, column=0, padx=5, pady=1, sticky="w")
 
-        # Initialize the radio button variable for game mode selection
         self.radio_var = tk.StringVar(value="Simple Game")
 
-        # Create a frame for radio buttons (game mode selection)
         radio_frame = tk.Frame(parent)
         radio_frame.grid(row=0, column=1, padx=10, pady=1, sticky="w")
 
-        # Simple Game Radio Button
         tk.Radiobutton(radio_frame, text="Simple game", variable=self.radio_var, value="Simple Game").grid(row=0, column=0, padx=5, pady=1)
-
-        # General Game Radio Button
         tk.Radiobutton(radio_frame, text="General game", variable=self.radio_var, value="General Game").grid(row=0, column=1, padx=5, pady=1)
 
-        # Board size label
         board_size_label = tk.Label(parent, text="Board size")
         board_size_label.grid(row=0, column=2, padx=5, pady=1, sticky="w")
 
-        # Initialize the Spinbox for board size selection
         self.board_size_var = tk.IntVar(value=3)
-        
-        # Validate command for the board size Spinbox
         vcmd = (self.root.register(self.validate_board_size), '%P')
-
-        # Spinbox for selecting board size (from 3 to 20)
         self.board_size_spinbox = tk.Spinbox(parent, from_=3, to=20, textvariable=self.board_size_var, 
                                              validate="key", validatecommand=vcmd, width=3)
         self.board_size_spinbox.grid(row=0, column=3, padx=5, pady=1, sticky="w")
@@ -137,79 +129,96 @@ class SOSGameGUI:
 
     def start_game(self):
         """Initializes the game board and sets up for play."""
-        self.is_game_active = True  # Game is active when started
-        self.game_mode = self.radio_var.get().split()[0]  # "Simple" or "General"
-        self.board_size = self.board_size_var.get()
+        self.is_game_active = True
+        # Retrieve the game mode as selected by the user in the radio button ("Simple" or "General")
+        selected_mode = self.radio_var.get().split()[0]  # "Simple" or "General"
 
-        # Dynamically adjust the window size based on the board size
-        self.adjust_window_size(self.board_size)
+        self.game_mode = selected_mode  # Update GUI�s game mode
+        self.board_size = self.board_size_var.get()  # Get selected board size from spinbox
+        
+        print("Selected game mode:", self.game_mode)
 
-        # Reset the game with the selected board size and game mode
+        # Pass the selected game mode to the GameManager
         self.game_manager.reset_game(self.board_size, self.game_mode)
 
-        # Initialize the GameBoard instance
+        # Adjust the window size and initialize the game board
+        self.adjust_window_size(self.board_size)
         self.board = GameBoard(self.board_frame, self.board_size, self.on_board_click)
-
-        # Recreate the board with the new size
         self.board.create_board()
+        
+        initial_turn = self.game_manager.get_current_player()
+        self.turn_label.config(text=f"Current turn: {initial_turn}")
+        self.turn_label.grid()  # Show the turn label to start displaying turns
 
-        # Show the turn label
-        self.turn_label.grid()
 
     def adjust_window_size(self, board_size):
         """Adjusts the window size based on the board size."""
-        # Define size per cell (button) in pixels
         cell_size = 50
-
-        # Calculate desired window size
         board_pixel_size = board_size * cell_size
-
-        # Set a threshold window size for scrollbars
         max_window_size = 600
 
-        # If the board size exceeds the threshold, enable scrollbars and set window size to max
         if board_pixel_size > max_window_size:
             self.canvas.grid()
         else:
-            # Resize window to fit the board perfectly without scrollbars
-            self.root.geometry(f"{board_pixel_size + 200}x{board_pixel_size + 200}")  # +200 for padding and controls
+            self.root.geometry(f"{board_pixel_size + 600}x{board_pixel_size + 600}")
 
     def on_board_click(self, row, col):
         """Handles a click on the board."""
         if not self.game_manager.is_game_active:
-            return  # Ignore clicks if the game is not active
+            return
 
-        # Get the current player's choice of "S" or "O"
         current_player = self.game_manager.get_current_player()
         character_choice = self.blue_controls.choice.get() if current_player == "Blue" else self.red_controls.choice.get()
 
-        # Make the move using the chosen character
-        if self.game_manager.make_move(row, col, character_choice):
+        move_result = self.game_manager.make_move(row, col, character_choice)
+
+        if move_result:
+            # Update the board visually
             self.board.update_button(row, col, character_choice)
 
-            # Switch turns after a valid move
-            self.game_manager.switch_turn()
-            next_turn = self.game_manager.get_current_player()
-            self.turn_label.config(text=f"Current turn: {next_turn}")
+            # Handle different results from make_move
+            if move_result["result"] == "win":
+                self.turn_label.config(text=f"{move_result['winner']} wins by creating the first SOS!")
+                self.end_game()
+            elif move_result["result"] == "continue":
+                self.update_sos_count_display()
+                self.turn_label.config(text=f"SOS! Current Turn: {current_player}")
+            elif move_result["result"] == "draw":
+                self.turn_label.config(text="The game is a draw! No SOS was created.")
+                self.end_game()
+            elif move_result["result"] == "end":
+                winner = move_result["winner"]
+                blue_score = move_result["blue_score"]
+                red_score = move_result["red_score"]
+
+                if winner == "Draw":
+                    self.turn_label.config(text=f"The game is a draw! (Blue: {blue_score}, Red: {red_score})")
+                else:
+                    self.turn_label.config(text=f"{winner} wins! (Blue: {blue_score}, Red: {red_score})")
+                self.end_game()
+            else:
+                # Switch to the next player if no SOS created
+                self.game_manager.switch_turn()
+                next_turn = self.game_manager.get_current_player()
+                self.turn_label.config(text=f"Current turn: {next_turn}")
+
+
+    def update_sos_count_display(self):
+        """Updates the SOS count display for each player."""
+        blue_count = self.game_manager.sos_count["Blue"]
+        red_count = self.game_manager.sos_count["Red"]
+        self.blue_sos_label.config(text=f"Blue SOS Count: {blue_count}")
+        self.red_sos_label.config(text=f"Red SOS Count: {red_count}")
 
     def end_game(self):
         """Ends the game, disables all buttons, and clears the board."""
         self.is_game_active = False
         self.game_manager.end_game()
 
-        # Disable all buttons on the board
         self.board.disable_buttons()
-
-        # Reset player choices (both players default to "S")
         self.blue_controls.choice.set("S")
         self.red_controls.choice.set("S")
-
-        # Reset the turn label to indicate Blue player starts first
-        self.turn_label.config(text="Current turn: Blue")
-
-        # Hide the turn label and the board frame when the game ends
-        self.turn_label.grid_remove()
-
+        self.board_frame.grid_remove()
 
 def main():
     """Main function to run the Tkinter application."""
@@ -217,6 +226,6 @@ def main():
     app = SOSGameGUI(root)
     root.mainloop()
 
-
 if __name__ == "__main__":
     main()
+    
